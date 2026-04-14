@@ -1,0 +1,18 @@
+# Data files
+*.parquet
+*.csv
+*.joblib
+
+# Credentials
+*.json
+
+# Python
+__pycache__/
+.env
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Claude
+CLAUDE.md
