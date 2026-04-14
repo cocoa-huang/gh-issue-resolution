@@ -112,7 +112,6 @@ def main():
         max_iter=1,
         tol=None,
         random_state=42,
-        class_weight="balanced",
     )
 
     # ── 3. Train (streaming, one shard at a time) ─────────────────────────────
