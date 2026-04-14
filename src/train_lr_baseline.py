@@ -8,8 +8,9 @@ Uses SGDClassifier with partial_fit to stream shards — never loads full
 dataset into memory.
 
 Temporal split:
-    Train: issue_created_at < 2025-11-01
-    Test:  issue_created_at >= 2025-11-01
+    Train: issue_created_at < 2025-08-01
+    Test:  2025-08-01 <= issue_created_at < 2025-11-01
+    Discard: issue_created_at >= 2025-11-01 (labels truncated — insufficient time to mature)
 
 Usage:
     python3 src/train_lr_baseline.py           # full run
@@ -41,7 +42,8 @@ RESULTS_DIR = "results"
 LABEL_ORDER = ["Fast", "Medium", "Slow", "Stale"]
 AUTHOR_CATS = ["COLLABORATOR", "CONTRIBUTOR", "MEMBER", "NONE", "OWNER"]
 
-TRAIN_CUTOFF = pd.Timestamp("2025-11-01", tz="UTC")
+TRAIN_CUTOFF = pd.Timestamp("2025-08-01", tz="UTC")
+TEST_CUTOFF  = pd.Timestamp("2025-11-01", tz="UTC")  # discard >= this (truncated labels)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -87,7 +89,7 @@ def main():
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     fs, paths = get_shards(GCS_ISSUES, sample=sample)
-    print(f"  Temporal split: train < {TRAIN_CUTOFF.date()}  |  test >= {TRAIN_CUTOFF.date()}")
+    print(f"  Temporal split: train < {TRAIN_CUTOFF.date()}  |  test {TRAIN_CUTOFF.date()} – {TEST_CUTOFF.date()}  |  discard >= {TEST_CUTOFF.date()}")
 
     # ── 1. Count train labels for class weights (pass 1) ─────────────────────
     print("\nCounting label distribution (train split)...")
@@ -143,13 +145,13 @@ def main():
     print(f"  Done. {n_train_shards} shards contributed training rows.")
 
     # ── 4. Evaluate on test split (streaming, pass 3) ────────────────────────
-    print("\nEvaluating on test split (>= 2025-11-01)...")
+    print(f"\nEvaluating on test split ({TRAIN_CUTOFF.date()} – {TEST_CUTOFF.date()})...")
     all_preds = []
     all_true  = []
     n_test = 0
     for p in paths:
         df = load_shard(fs, p)
-        test_df = df[df["created_at"] >= TRAIN_CUTOFF]
+        test_df = df[(df["created_at"] >= TRAIN_CUTOFF) & (df["created_at"] < TEST_CUTOFF)]
         if test_df.empty:
             continue
         X = featurize(vectorizer, test_df)
@@ -165,7 +167,7 @@ def main():
 
     output = (
         f"Model 1 — LR text-only (SGD/HashingVectorizer)\n"
-        f"Temporal split: train < 2025-11-01  |  test >= 2025-11-01\n"
+        f"Temporal split: train < 2025-08-01  |  test 2025-08-01 – 2025-10-31\n"
         f"{'='*50}\n"
         f"Train issues: {total:,}  |  Test issues: {n_test:,}\n"
         f"Macro-F1: {macro_f1:.4f}\n\n"
