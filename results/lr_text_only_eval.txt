@@ -1,0 +1,21 @@
+Model 1 — LR text-only (SGD/HashingVectorizer)
+==================================================
+Macro-F1: 0.3850
+
+              precision    recall  f1-score   support
+
+        Fast      0.851     0.450     0.589    989732
+      Medium      0.195     0.424     0.268    222342
+        Slow      0.168     0.192     0.179    140314
+       Stale      0.423     0.626     0.505    385900
+
+    accuracy                          0.465   1738288
+   macro avg      0.409     0.423     0.385   1738288
+weighted avg      0.617     0.465     0.496   1738288
+
+Confusion matrix (rows=true, cols=pred)
+Order: ['Fast', 'Medium', 'Slow', 'Stale']
+[[445110 267245  62617 214760]
+ [ 32871  94374  29871  65226]
+ [ 14580  48674  27006  50054]
+ [ 30238  72810  41332 241520]]
