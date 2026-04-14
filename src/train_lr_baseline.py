@@ -102,7 +102,6 @@ def main():
     # ── 2. Build vectorizer and classifier ───────────────────────────────────
     vectorizer = HashingVectorizer(
         n_features=2**18,   # 262144 buckets — good balance of speed vs. collision
-        sublinear_tf=True,
         ngram_range=(1, 2),
         alternate_sign=False,
         norm="l2",
