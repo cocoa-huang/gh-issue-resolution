@@ -7,6 +7,10 @@ Metric:   macro-F1
 Uses SGDClassifier with partial_fit to stream shards — never loads full
 dataset into memory.
 
+Temporal split:
+    Train: issue_created_at < 2025-11-01
+    Test:  issue_created_at >= 2025-11-01
+
 Usage:
     python3 src/train_lr_baseline.py           # full run
     python3 src/train_lr_baseline.py --sample  # smoke test: 3 shards only
@@ -18,14 +22,15 @@ Outputs:
 
 import os
 import sys
+from collections import Counter
+
 import gcsfs
 import numpy as np
 import pandas as pd
 import joblib
-from scipy.sparse import hstack
+from scipy.sparse import hstack, csr_matrix
 from sklearn.linear_model import SGDClassifier
 from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.preprocessing import LabelEncoder
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import classification_report, f1_score, confusion_matrix
 
@@ -34,8 +39,9 @@ from sklearn.metrics import classification_report, f1_score, confusion_matrix
 GCS_ISSUES  = "gs://gh_issue_ml-data/issues/issues_labeled_2025/"
 RESULTS_DIR = "results"
 LABEL_ORDER = ["Fast", "Medium", "Slow", "Stale"]
-
 AUTHOR_CATS = ["COLLABORATOR", "CONTRIBUTOR", "MEMBER", "NONE", "OWNER"]
+
+TRAIN_CUTOFF = pd.Timestamp("2025-11-01", tz="UTC")
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -52,6 +58,14 @@ def get_shards(gcs_prefix: str, sample: bool = False):
     return fs, paths
 
 
+def load_shard(fs, path: str) -> pd.DataFrame:
+    df = pd.read_parquet(fs.open(path))
+    df["created_at"] = pd.to_datetime(df["issue_created_at"], utc=True)
+    df["text"] = df["title"].fillna("") + " " + df["body"].fillna("")
+    df["author_association"] = df["author_association"].fillna("NONE")
+    return df
+
+
 def encode_author(series: pd.Series) -> np.ndarray:
     """One-hot encode author_association into a dense array."""
     col = series.fillna("NONE").str.upper()
@@ -61,12 +75,10 @@ def encode_author(series: pd.Series) -> np.ndarray:
     return result
 
 
-def shard_iter(fs, paths):
-    for p in paths:
-        df = pd.read_parquet(fs.open(p))
-        df["text"] = df["title"].fillna("") + " " + df["body"].fillna("")
-        df["author_association"] = df["author_association"].fillna("NONE")
-        yield df
+def featurize(vectorizer: HashingVectorizer, df: pd.DataFrame):
+    text_X   = vectorizer.transform(df["text"])
+    author_X = csr_matrix(encode_author(df["author_association"]))
+    return hstack([text_X, author_X])
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -75,69 +87,77 @@ def main():
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     fs, paths = get_shards(GCS_ISSUES, sample=sample)
+    print(f"  Temporal split: train < {TRAIN_CUTOFF.date()}  |  test >= {TRAIN_CUTOFF.date()}")
 
-    # Split shards: last 20% → test, rest → train
-    n_test = max(1, int(len(paths) * 0.2))
-    train_paths = paths[:-n_test]
-    test_paths  = paths[-n_test:]
-    print(f"  Train shards: {len(train_paths)}  Test shards: {len(test_paths)}")
-
-    # ── 1. Compute class weights from training shards ─────────────────────────
-    print("\nCounting label distribution (train shards)...")
-    from collections import Counter
+    # ── 1. Count train labels for class weights (pass 1) ─────────────────────
+    print("\nCounting label distribution (train split)...")
     label_counts: Counter = Counter()
-    for df in shard_iter(fs, train_paths):
-        label_counts.update(df["label"].tolist())
+    for p in paths:
+        df = load_shard(fs, p)
+        train_df = df[df["created_at"] < TRAIN_CUTOFF]
+        label_counts.update(train_df["label"].tolist())
 
-    print("  Label distribution (train):")
     total = sum(label_counts.values())
+    print(f"  Train issues: {total:,}")
+    print("  Label distribution (train):")
     for lbl in LABEL_ORDER:
         print(f"    {lbl}: {label_counts[lbl]:,} ({100*label_counts[lbl]/total:.1f}%)")
 
-    labels_arr = np.array([lbl for lbl, cnt in label_counts.items() for _ in range(cnt)])
-    class_weights = compute_class_weight("balanced", classes=np.array(LABEL_ORDER), y=labels_arr)
+    # compute_class_weight needs a y array — reconstruct from counts
+    y_for_weights = np.array([lbl for lbl, cnt in label_counts.items() for _ in range(cnt)])
+    class_weights = compute_class_weight("balanced", classes=np.array(LABEL_ORDER), y=y_for_weights)
     sample_weight_map = dict(zip(LABEL_ORDER, class_weights))
-    print(f"  Class weights: { {k: round(v,3) for k,v in sample_weight_map.items()} }")
+    print(f"  Class weights: { {k: round(v, 3) for k, v in sample_weight_map.items()} }")
 
     # ── 2. Build vectorizer and classifier ───────────────────────────────────
     vectorizer = HashingVectorizer(
-        n_features=2**18,   # 262144 buckets — good balance of speed vs. collision
+        n_features=2**18,
         ngram_range=(1, 2),
         alternate_sign=False,
         norm="l2",
     )
 
     clf = SGDClassifier(
-        loss="modified_huber",   # produces calibrated probabilities, robust to outliers
+        loss="modified_huber",
         max_iter=1,
         tol=None,
         random_state=42,
     )
 
-    # ── 3. Train (streaming, one shard at a time) ─────────────────────────────
+    # ── 3. Train (streaming, pass 2) ─────────────────────────────────────────
     print("\nTraining (streaming)...")
-    for i, df in enumerate(shard_iter(fs, train_paths)):
-        text_X   = vectorizer.transform(df["text"])
-        author_X = encode_author(df["author_association"])
-        from scipy.sparse import csr_matrix
-        X = hstack([text_X, csr_matrix(author_X)])
-        y = df["label"].values
+    n_train_shards = 0
+    for i, p in enumerate(paths):
+        df = load_shard(fs, p)
+        train_df = df[df["created_at"] < TRAIN_CUTOFF]
+        if train_df.empty:
+            continue
+        X  = featurize(vectorizer, train_df)
+        y  = train_df["label"].values
         sw = np.array([sample_weight_map[lbl] for lbl in y])
         clf.partial_fit(X, y, classes=LABEL_ORDER, sample_weight=sw)
-        if (i + 1) % 10 == 0 or (i + 1) == len(train_paths):
-            print(f"  Trained shard {i+1}/{len(train_paths)}")
+        n_train_shards += 1
+        if n_train_shards % 10 == 0:
+            print(f"  Trained {n_train_shards} shards...")
 
-    # ── 4. Evaluate on test shards ────────────────────────────────────────────
-    print("\nEvaluating on test shards...")
+    print(f"  Done. {n_train_shards} shards contributed training rows.")
+
+    # ── 4. Evaluate on test split (streaming, pass 3) ────────────────────────
+    print("\nEvaluating on test split (>= 2025-11-01)...")
     all_preds = []
     all_true  = []
-    for df in shard_iter(fs, test_paths):
-        text_X   = vectorizer.transform(df["text"])
-        author_X = encode_author(df["author_association"])
-        from scipy.sparse import csr_matrix
-        X = hstack([text_X, csr_matrix(author_X)])
+    n_test = 0
+    for p in paths:
+        df = load_shard(fs, p)
+        test_df = df[df["created_at"] >= TRAIN_CUTOFF]
+        if test_df.empty:
+            continue
+        X = featurize(vectorizer, test_df)
         all_preds.extend(clf.predict(X).tolist())
-        all_true.extend(df["label"].tolist())
+        all_true.extend(test_df["label"].tolist())
+        n_test += len(test_df)
+
+    print(f"  Test issues: {n_test:,}")
 
     macro_f1 = f1_score(all_true, all_preds, average="macro", labels=LABEL_ORDER)
     report   = classification_report(all_true, all_preds, labels=LABEL_ORDER, digits=3)
@@ -145,7 +165,9 @@ def main():
 
     output = (
         f"Model 1 — LR text-only (SGD/HashingVectorizer)\n"
+        f"Temporal split: train < 2025-11-01  |  test >= 2025-11-01\n"
         f"{'='*50}\n"
+        f"Train issues: {total:,}  |  Test issues: {n_test:,}\n"
         f"Macro-F1: {macro_f1:.4f}\n\n"
         f"{report}\n"
         f"Confusion matrix (rows=true, cols=pred)\n"
