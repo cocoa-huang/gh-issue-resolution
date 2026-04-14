@@ -5,7 +5,8 @@ Features: TF-IDF on (title + body) + author_association (one-hot)
 Metric:   macro-F1
 
 Usage:
-    python3 src/train_lr_baseline.py
+    python3 src/train_lr_baseline.py           # full run
+    python3 src/train_lr_baseline.py --sample  # smoke test: 3 shards only
 
 Outputs:
     results/lr_text_only.joblib
@@ -13,6 +14,7 @@ Outputs:
 """
 
 import os
+import sys
 import gcsfs
 import pandas as pd
 import joblib
@@ -32,22 +34,27 @@ LABEL_ORDER = ["Fast", "Medium", "Slow", "Stale"]
 
 # ── Load ──────────────────────────────────────────────────────────────────────
 
-def load_gcs_parquet(gcs_prefix: str) -> pd.DataFrame:
+def load_gcs_parquet(gcs_prefix: str, sample: bool = False) -> pd.DataFrame:
     fs = gcsfs.GCSFileSystem()
     paths = sorted(fs.glob(gcs_prefix.rstrip("/") + "/*.parquet"))
     if not paths:
         raise FileNotFoundError(f"No parquets found at {gcs_prefix}")
-    print(f"  Loading {len(paths)} shards...")
+    if sample:
+        paths = paths[:3]
+        print(f"  [sample mode] Loading {len(paths)} shards...")
+    else:
+        print(f"  Loading {len(paths)} shards...")
     return pd.concat([pd.read_parquet(fs.open(p)) for p in paths], ignore_index=True)
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    sample = "--sample" in sys.argv
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     # 1. Load issues
     print("Loading issues...")
-    df = load_gcs_parquet(GCS_ISSUES)
+    df = load_gcs_parquet(GCS_ISSUES, sample=sample)
     df["text"] = df["title"].fillna("") + " " + df["body"].fillna("")
     df["author_association"] = df["author_association"].fillna("NONE")
     print(f"  {len(df):,} issues loaded")
@@ -96,15 +103,20 @@ def main():
     )
     print(output)
 
-    eval_path = f"{RESULTS_DIR}/lr_text_only_eval.txt"
+    suffix = "_sample" if sample else ""
+
+    eval_path = f"{RESULTS_DIR}/lr_text_only{suffix}_eval.txt"
     with open(eval_path, "w") as f:
         f.write(output)
     print(f"Eval written to {eval_path}")
 
-    # 6. Save model
-    model_path = f"{RESULTS_DIR}/lr_text_only.joblib"
-    joblib.dump(model, model_path)
-    print(f"Model saved to {model_path}")
+    # 6. Save model (skip saving for sample runs — model is not meaningful)
+    if not sample:
+        model_path = f"{RESULTS_DIR}/lr_text_only.joblib"
+        joblib.dump(model, model_path)
+        print(f"Model saved to {model_path}")
+    else:
+        print("Sample run — model not saved.")
 
 
 if __name__ == "__main__":
