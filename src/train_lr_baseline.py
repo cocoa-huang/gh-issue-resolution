@@ -77,7 +77,7 @@ def main():
             class_weight="balanced",
             max_iter=1000,
             solver="saga",
-            n_jobs=-1,
+            # n_jobs=-1,
             random_state=42,
         )),
     ])
