@@ -120,7 +120,7 @@ def main():
     )
 
     clf = SGDClassifier(
-        loss="modified_huber",
+        loss="log_loss",
         max_iter=1,
         tol=None,
         random_state=42,
