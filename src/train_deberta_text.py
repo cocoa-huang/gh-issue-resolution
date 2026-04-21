@@ -326,7 +326,7 @@ def main():
         warmup_ratio=WARMUP_RATIO,
         weight_decay=WEIGHT_DECAY,
         fp16=FP16,
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         eval_steps=EVAL_STEPS,
         save_strategy="steps",
         save_steps=SAVE_STEPS,
