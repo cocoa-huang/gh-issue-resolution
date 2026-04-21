@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=deberta-text
+#SBATCH --account=torch_pr_932_general
 #SBATCH --partition=l40s_public
 #SBATCH --gres=gpu:l40s:1
 #SBATCH --cpus-per-task=8
@@ -12,11 +13,9 @@ set -e
 
 REPO=/scratch/$USER/gh-issue-resolution
 
-# Activate venv
 source $REPO/.venv/bin/activate
-
-# Auth GCS via service account key injected at runtime (set GOOGLE_APPLICATION_CREDENTIALS)
-# If using gcloud ADC, run `gcloud auth application-default login` interactively first.
+export GOOGLE_APPLICATION_CREDENTIALS=/scratch/$USER/gcp-key.json
+export TMPDIR=/scratch/$USER/tmp && mkdir -p $TMPDIR
 
 cd $REPO
 mkdir -p logs results
