@@ -1,0 +1,24 @@
+Model 2 — LR text+signals (SGD/HashingVectorizer + repo signals log1p)
+Temporal split: train < 2025-08-01  |  test 2025-08-01 – 2025-10-31
+Signal features: ['pr_merged_30d', 'avg_merge_hours_30d', 'push_count_30d', 'release_count_90d', 'star_count_30d']
+============================================================
+Train issues: 6,665,898  |  Test issues: 1,351,901
+Macro-F1: 0.3005
+
+              precision    recall  f1-score   support
+
+        Fast      0.847     0.527     0.650    941739
+      Medium      0.204     0.285     0.237    188299
+        Slow      0.075     0.058     0.066    100872
+       Stale      0.160     0.564     0.250    120991
+
+    accuracy                          0.461   1351901
+   macro avg      0.322     0.358     0.301   1351901
+weighted avg      0.639     0.461     0.513   1351901
+
+Confusion matrix (rows=true, cols=pred)
+Order: ['Fast', 'Medium', 'Slow', 'Stale']
+[[495868 168207  51707 225957]
+ [ 44941  53573  15919  73866]
+ [ 16603  21139   5876  57254]
+ [ 27716  20298   4768  68209]]
