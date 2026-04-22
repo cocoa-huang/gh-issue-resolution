@@ -1,0 +1,24 @@
+Model 3 — Fine-tuned DeBERTa text-only (microsoft/deberta-v3-base)
+Temporal split: train < 2025-08-01  |  test 2025-08-01 – 2025-10-31
+Train: 449,323 (stratified sample)  |  Val: 49,924  |  Test: 1,351,901 (full)
+Epochs: 3  |  Effective batch: 64  |  LR: 2e-05  |  fp16: True
+============================================================
+Macro-F1: 0.3563
+
+              precision    recall  f1-score   support
+
+        Fast      0.859     0.532     0.657    941739
+      Medium      0.205     0.404     0.272    188299
+        Slow      0.164     0.225     0.190    100872
+       Stale      0.225     0.482     0.306    120991
+
+    accuracy                          0.487   1351901
+   macro avg      0.363     0.411     0.356   1351901
+weighted avg      0.659     0.487     0.537   1351901
+
+Confusion matrix (rows=true, cols=pred)
+Order: ['Fast', 'Medium', 'Slow', 'Stale']
+[[501186 232688  69340 138525]
+ [ 40044  76000  33181  39074]
+ [ 16776  37567  22659  23870]
+ [ 25466  24584  12603  58338]]
