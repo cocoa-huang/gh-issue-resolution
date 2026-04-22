@@ -1,0 +1,25 @@
+Model 4 — Fine-tuned DeBERTa text + repo signals (microsoft/deberta-v3-base)
+Temporal split: train < 2025-08-01  |  test 2025-08-01 – 2025-10-31
+Train: 449,323 (stratified sample)  |  Val: 49,924  |  Test: 1,351,901 (full)
+Epochs: 3  |  Effective batch: 64  |  LR: 2e-05  |  fp16: True
+Signal features (10): ['pr_merged_30d', 'avg_merge_hours_30d', 'push_count_30d', 'release_count_90d', 'star_count_30d'] + author_association one-hot
+============================================================
+Macro-F1: 0.3610
+
+              precision    recall  f1-score   support
+
+        Fast      0.849     0.565     0.679    941739
+      Medium      0.208     0.331     0.255    188299
+        Slow      0.158     0.288     0.204    100872
+       Stale      0.230     0.459     0.306    120991
+
+    accuracy                          0.502   1351901
+   macro avg      0.361     0.411     0.361   1351901
+weighted avg      0.653     0.502     0.551   1351901
+
+Confusion matrix (rows=true, cols=pred)
+Order: ['Fast', 'Medium', 'Slow', 'Stale']
+[[532500 188607  95395 125237]
+ [ 45593  62242  43780  36684]
+ [ 18691  28823  29004  24354]
+ [ 30213  19865  15408  55505]]
