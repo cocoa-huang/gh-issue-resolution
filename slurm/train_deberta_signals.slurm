@@ -20,8 +20,11 @@ export TMPDIR=/scratch/$USER/tmp && mkdir -p $TMPDIR
 cd $REPO
 mkdir -p logs results
 
+SIZES=(5000 10000 50000 100000 200000 500000)
+
 echo "Job started: $(date)"
 echo "Node: $SLURMD_NODENAME"
+echo "Train sample size: ${TRAIN_SAMPLE}"
 nvidia-smi
 
 python3 src/train_deberta_signals.py
