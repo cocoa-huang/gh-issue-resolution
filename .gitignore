@@ -16,3 +16,6 @@ venv/
 
 # Claude
 CLAUDE.md
+
+# Api-keys
+**/*_api_key.txt
