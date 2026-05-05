@@ -22,7 +22,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 GCS_SIGNALS = "gs://gh_issue_ml-data/issues/issues_with_signals/"
 GCS_OUTPUT = "gs://gh_issue_ml-data/llm_features/qwen_summaries/"
-MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
+MODEL_NAME = "Qwen/Qwen3.5-2B"
 
 TRAIN_CUTOFF = pd.Timestamp("2025-08-01", tz="UTC")
 TEST_CUTOFF = pd.Timestamp("2025-11-01", tz="UTC")
