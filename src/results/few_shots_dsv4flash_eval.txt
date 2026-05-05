@@ -1,0 +1,25 @@
+LLM zero-shot — text + repo signals (deepseek-v4-flash)
+Provider: deepseek
+Temporal split: train < 2025-08-01  |  test 2025-08-01 – 2025-10-31
+Evaluation sample: 1,000 sampled test issues from local parquet
+Signal features (10): ['title', 'body', 'issue_created_at', 'label', 'author_association', 'pr_merged_30d', 'avg_merge_hours_30d', 'push_count_30d', 'release_count_90d', 'star_count_30d']
+============================================================
+Macro-F1: 0.2725
+
+              precision    recall  f1-score   support
+
+        Fast      0.855     0.382     0.528       696
+      Medium      0.221     0.436     0.293       149
+        Slow      0.141     0.314     0.195        86
+       Stale      0.049     0.145     0.073        69
+
+    accuracy                          0.368      1000
+   macro avg      0.317     0.319     0.272      1000
+weighted avg      0.644     0.368     0.433      1000
+
+Confusion matrix (rows=true, cols=pred)
+Order: ['Fast', 'Medium', 'Slow', 'Stale']
+[[266 176 108 146]
+ [ 24  65  36  24]
+ [  6  29  27  24]
+ [ 15  24  20  10]]

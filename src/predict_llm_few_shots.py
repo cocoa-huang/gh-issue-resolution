@@ -4,7 +4,7 @@ import time
 import argparse
 import pandas as pd
 import numpy as np
-import gcsfs
+#import gcsfs
 from sklearn.metrics import f1_score, classification_report, confusion_matrix
 from openai import OpenAI
 
@@ -43,6 +43,61 @@ Slow: issue is likely resolved after 30 days.
 Stale: issue is unlikely to be resolved or remains unresolved.
 
 Your rationale should very briefly explain the key factors influencing your prediction, such as relevant signals or issue content.
+
+User:
+Here are labeled examples.
+
+Example 1:
+title: 🛠️ Task: Conversation List (Sidebar)
+body: ### 🔗 Parent Issue\n\n#77\n\n### 🧩 Module\n\nMessages\n\n### 📝 Description\n\nImplement the left-side conversation list where users can see their recent chats.\n\n### ✅ Acceptance Criteria\n\n- [x] Create a scrollable list of recent conversations.\n- [x] Add a search bar for filtering messages.\n- [x] Display user avatars, names, and last message preview.\n- [ ] Connect to a mock API or backend endpoint.\n\n### 🔥 Priority\n\nHigh\n\n### 💬 Additional Notes\n\n_No response
+Signals:
+- author_association: NONE
+- pr_merged_30d: 0
+- avg_merge_hours_30d: 0
+- push_count_30d: 0
+- release_count_90d: 0
+- star_count_30d: 0
+
+Correct label: Slow
+
+Example 2:
+title: 🛑 Manhuagui is down	
+body: In [`a8d7dd2`](https://github.com/http403/uptime_monitor/commit/a8d7dd2b975ee0cc5693fc7173c1b137a2756178\n), Manhuagui (https://www.manhuagui.com) was **down**:\n- HTTP code: 0\n- Response time: 0 ms\n	
+Signals:
+- author_association: OWNER
+- pr_merged_30d: 40
+- avg_merge_hours_30d: 2.636364
+- push_count_30d: 3284
+- release_count_90d: 0
+- star_count_30d: 0
+
+Correct label: Fast
+
+Example 3:
+title: [Registry] 👤 Admin 📖 Add an authorized bot	
+body: - [x] Backend development\n- [x] Writing documentation\n- [x] Tests implementation\n- [x] Internal security audit and optimization\n\nFrontend : no user interface is initially planned for this feature\nBackend (payable) : Registry adds an address of an authorized bot to its data
+Signals:
+- author_association: NONE
+- pr_merged_30d: 0
+- avg_merge_hours_30d: NAN
+- push_count_30d: 0
+- release_count_90d: 0
+- star_count_30d: 0
+
+Correct label: Medium
+
+Example 4:
+title: Fix Bug #12345678
+body: This issue tracks fixing a critical bug in the application.
+- author_association: OWNER
+- pr_merged_30d: 0
+- avg_merge_hours_30d: NAN
+- push_count_30d: 6
+- release_count_90d: 0
+- star_count_30d: 0
+
+Correct label: Stale
+
 """
 
 def load_mock_data(n=5):
