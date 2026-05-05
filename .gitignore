@@ -14,5 +14,10 @@ venv/
 # Jupyter
 .ipynb_checkpoints/
 
+# Local run artifacts
+.DS_Store
+graphify-out/
+logs/
+
 # Claude
 CLAUDE.md
