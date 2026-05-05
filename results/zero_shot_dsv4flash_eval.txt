@@ -1,0 +1,22 @@
+LLM zero-shot baseline
+Model: deepseek-v4-flash
+N: 1000
+Macro-F1: 0.2896
+
+              precision    recall  f1-score   support
+
+        Fast      0.805     0.547     0.652       696
+      Medium      0.204     0.295     0.241       149
+        Slow      0.104     0.163     0.127        86
+       Stale      0.096     0.246     0.138        69
+
+    accuracy                          0.456      1000
+   macro avg      0.302     0.313     0.290      1000
+weighted avg      0.607     0.456     0.510      1000
+
+Confusion matrix rows=true cols=pred
+Order: ['Fast', 'Medium', 'Slow', 'Stale']
+[[381 119  87 109]
+ [ 55  44  24  26]
+ [ 19  28  14  25]
+ [ 18  25   9  17]]
