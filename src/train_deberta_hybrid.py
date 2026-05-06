@@ -528,7 +528,7 @@ def main():
     torch.save(model.state_dict(), os.path.join(CKPT_DIR, "pytorch_model.bin"))
     tokenizer.save_pretrained(CKPT_DIR)
 
-    print(f"\nEvaluating on joined full test split (streaming, batch={INF_BATCH})...")
+    print(f"\nEvaluating on Qwen-covered joined test split (streaming, batch={INF_BATCH})...")
     model.to(device)
     all_preds, all_true = stream_test_eval(model, tokenizer, fs, paths, qwen, device)
     print(f"  Total test rows evaluated: {len(all_true):,}")
@@ -542,9 +542,9 @@ def main():
     output = (
         f"Model 5 - Qwen summary + raw issue text + repo signals ({MODEL_NAME})\n"
         f"Warm start: saved Model 4 DeBERTa+signals checkpoint ({args.warm_start})\n"
-        f"Comparison baseline: Model 4 raw issue text + repo signals macro-F1 = 0.361\n"
+        f"Reference baseline: Model 4 raw issue text + repo signals macro-F1 = 0.361 on full test\n"
         f"Temporal split: train < 2025-08-01  |  test 2025-08-01 - 2025-10-31\n"
-        f"Train: {n_tr:,} (stratified sample)  |  Val: {n_val:,}  |  Test: {len(all_true):,} (joined full)\n"
+        f"Train: {n_tr:,} (Qwen-covered sample)  |  Val: {n_val:,}  |  Test: {len(all_true):,} (Qwen-covered joined)\n"
         f"Input: [SUMMARY: qwen_summary] [ISSUE: title body]\n"
         f"Signal features ({NUM_SIGNALS}): {SIGNAL_COLS} + author_association one-hot\n"
         f"Epochs: {EPOCHS}  |  Effective batch: {TRAIN_BATCH * GRAD_ACCUM}  |  LR: {LR}  |  fp16: {FP16}\n"
