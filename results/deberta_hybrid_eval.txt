@@ -1,28 +1,28 @@
 Model 5 - Qwen summary + raw issue text + repo signals (microsoft/deberta-v3-base)
 Warm start: saved Model 4 DeBERTa+signals checkpoint (/scratch/zh2312/gh-issue-resolution/results/deberta_signals/pytorch_model.bin)
-Comparison baseline: Model 4 raw issue text + repo signals macro-F1 = 0.361
+Reference baseline: Model 4 raw issue text + repo signals macro-F1 = 0.361 on full test
 Temporal split: train < 2025-08-01  |  test 2025-08-01 - 2025-10-31
-Train: 37,395 (stratified sample)  |  Val: 4,154  |  Test: 8,452 (joined full)
+Train: 39,734 (Qwen-covered sample)  |  Val: 4,414  |  Test: 10,401 (Qwen-covered joined)
 Input: [SUMMARY: qwen_summary] [ISSUE: title body]
 Signal features (10): ['pr_merged_30d', 'avg_merge_hours_30d', 'push_count_30d', 'release_count_90d', 'star_count_30d'] + author_association one-hot
 Epochs: 3  |  Effective batch: 64  |  LR: 2e-05  |  fp16: True
 ============================================================
-Macro-F1: 0.3626
+Macro-F1: 0.3565
 
               precision    recall  f1-score   support
 
-        Fast      0.827     0.554     0.663      5648
-      Medium      0.225     0.346     0.273      1276
-        Slow      0.160     0.289     0.206       685
-       Stale      0.243     0.422     0.309       843
+        Fast      0.839     0.564     0.675      7297
+      Medium      0.210     0.371     0.268      1500
+        Slow      0.164     0.241     0.195       731
+       Stale      0.214     0.436     0.287       873
 
-    accuracy                          0.488      8452
-   macro avg      0.364     0.403     0.363      8452
-weighted avg      0.624     0.488     0.532      8452
+    accuracy                          0.503     10401
+   macro avg      0.357     0.403     0.357     10401
+weighted avg      0.649     0.503     0.550     10401
 
 Confusion matrix (rows=true, cols=pred)
 Order: ['Fast', 'Medium', 'Slow', 'Stale']
-[[3128 1174  606  740]
- [ 315  442  298  221]
- [ 130  211  198  146]
- [ 210  138  139  356]]
+[[4119 1687  541  950]
+ [ 408  556  274  262]
+ [ 138  232  176  185]
+ [ 243  169   80  381]]
