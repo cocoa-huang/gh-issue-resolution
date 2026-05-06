@@ -10,8 +10,12 @@ Summary cache: gs://gh_issue_ml-data/llm_features/qwen_summaries/*.parquet
 """
 
 import argparse
+import faulthandler
 import hashlib
 import os
+import re
+import signal
+import sys
 from collections import Counter
 
 import gcsfs
@@ -96,6 +100,12 @@ def parse_args():
     return parser.parse_args()
 
 
+def dump_stack_on_signal(signum, frame):
+    print(f"\nReceived signal {signum}; dumping Python stack before exit.", file=sys.stderr, flush=True)
+    faulthandler.dump_traceback(file=sys.stderr, all_threads=True)
+    raise SystemExit(128 + signum)
+
+
 def issue_key(repo_name, issue_created_at, title, body) -> str:
     parts = [
         "" if pd.isna(repo_name) else str(repo_name),
@@ -136,15 +146,45 @@ def get_shards(fs, base_path: str, sample: bool = False):
     return paths
 
 
-def load_qwen_summaries(fs, base_path: str, sample: bool) -> pd.DataFrame:
+def get_qwen_shards(fs, base_path: str, sample: bool = False):
     paths = sorted(fs.glob(base_path.rstrip("/") + "/*.parquet"))
     if not paths:
         raise FileNotFoundError(f"No Qwen summary parquets found at {base_path}")
     if sample:
         paths = paths[:3]
+    return paths
+
+
+def qwen_source_indices(qwen_paths) -> set[int]:
+    indices = set()
+    for path in qwen_paths:
+        match = re.search(r"part-(\d+)\.parquet$", os.path.basename(path))
+        if match:
+            indices.add(int(match.group(1)))
+    return indices
+
+
+def restrict_signal_paths_to_qwen(paths, qwen_paths):
+    indices = qwen_source_indices(qwen_paths)
+    if not indices:
+        return paths
+    if max(indices) >= len(paths):
+        print(
+            "  Qwen shard indices do not match signal shard list; scanning all signal shards."
+        )
+        return paths
+    selected = [paths[i] for i in sorted(indices)]
+    print(
+        f"  Restricting signal scan to {len(selected)}/{len(paths)} source shards "
+        f"with Qwen summaries"
+    )
+    return selected
+
+
+def load_qwen_summaries(fs, qwen_paths) -> pd.DataFrame:
     frames = [
         pd.read_parquet(fs.open(p), columns=["issue_key", "qwen_summary"])
-        for p in paths
+        for p in qwen_paths
     ]
     qwen = pd.concat(frames, ignore_index=True).drop_duplicates("issue_key")
     qwen = qwen[qwen["qwen_summary"].fillna("").astype(str).str.len() > 0]
@@ -395,6 +435,9 @@ def stream_test_eval(model, tokenizer, fs, paths, qwen: pd.DataFrame, device):
 
 
 def main():
+    signal.signal(signal.SIGTERM, dump_stack_on_signal)
+    faulthandler.enable(file=sys.stderr, all_threads=True)
+
     args = parse_args()
     os.makedirs(CKPT_DIR, exist_ok=True)
     os.makedirs(RESULTS_DIR, exist_ok=True)
@@ -406,7 +449,9 @@ def main():
     paths = get_shards(fs, args.signals, sample=args.sample)
 
     print("\nLoading Qwen summaries...")
-    qwen = load_qwen_summaries(fs, args.qwen, sample=args.sample)
+    qwen_paths = get_qwen_shards(fs, args.qwen, sample=args.sample)
+    paths = restrict_signal_paths_to_qwen(paths, qwen_paths)
+    qwen = load_qwen_summaries(fs, qwen_paths)
     sample_summaries = qwen["qwen_summary"].head(20).to_frame()
     sample_summaries.to_csv(os.path.join(RESULTS_DIR, "qwen_summary_examples.csv"), index=False)
 
