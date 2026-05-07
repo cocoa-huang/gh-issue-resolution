@@ -33,12 +33,19 @@ import os
 import re
 from collections import Counter, defaultdict
 
+print("analyze_deberta_errors.py: importing gcsfs", flush=True)
 import gcsfs
+print("analyze_deberta_errors.py: importing numpy", flush=True)
 import numpy as np
+print("analyze_deberta_errors.py: importing pandas", flush=True)
 import pandas as pd
+print("analyze_deberta_errors.py: importing torch", flush=True)
 import torch
+print("analyze_deberta_errors.py: importing sklearn metrics", flush=True)
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
+print("analyze_deberta_errors.py: importing torch.nn", flush=True)
 from torch import nn
+print("analyze_deberta_errors.py: importing transformers", flush=True)
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers.modeling_outputs import SequenceClassifierOutput
 
