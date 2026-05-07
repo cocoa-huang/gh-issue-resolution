@@ -202,6 +202,7 @@ class DeBERTaWithSignals(nn.Module):
                 pooled.size(0), self.num_signals, device=pooled.device, dtype=pooled.dtype
             )
         combined = torch.cat([pooled, signals.to(pooled.device, pooled.dtype)], dim=1)
+        combined = combined.to(self.classifier.weight.dtype)
         return SequenceClassifierOutput(logits=self.classifier(combined))
 
 
