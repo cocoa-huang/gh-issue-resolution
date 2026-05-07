@@ -9,12 +9,20 @@
 #SBATCH --output=logs/err_smoke_%j.out
 #SBATCH --error=logs/err_smoke_%j.err
 
-set -euo pipefail
+set -euxo pipefail
 
 cd /scratch/zh2312/gh-issue-resolution
 mkdir -p logs
 source .venv-qwen/bin/activate
 module load google-cloud-sdk/552.0.0
+
+date
+hostname
+pwd
+which python
+python --version
+python -u -c "import torch; print('cuda', torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'cpu', flush=True)"
+python -u -c "import gcsfs; fs=gcsfs.GCSFileSystem(); print('signal shards', len(fs.glob('gs://gh_issue_ml-data/issues/issues_with_signals/*.parquet')), flush=True)"
 
 python -u -X faulthandler src/analyze_deberta_errors.py \
   --model-kind signals \

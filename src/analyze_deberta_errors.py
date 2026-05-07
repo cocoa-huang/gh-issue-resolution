@@ -25,6 +25,8 @@ Examples:
     --output-dir results/error_analysis/model5
 """
 
+print("analyze_deberta_errors.py: starting imports", flush=True)
+
 import argparse
 import hashlib
 import os
@@ -39,6 +41,8 @@ from sklearn.metrics import classification_report, confusion_matrix, f1_score
 from torch import nn
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers.modeling_outputs import SequenceClassifierOutput
+
+print("analyze_deberta_errors.py: imports complete", flush=True)
 
 
 GCS_SIGNALS = "gs://gh_issue_ml-data/issues/issues_with_signals/"
