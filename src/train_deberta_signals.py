@@ -59,7 +59,7 @@ from sklearn.utils.class_weight import compute_class_weight
 GCS_SIGNALS  = "gs://gh_issue_ml-data/issues/issues_with_signals/"
 MODEL_NAME   = "microsoft/deberta-v3-base"
 RESULTS_DIR  = "results"
-CKPT_DIR     = os.path.join(RESULTS_DIR, "deberta_signals")
+CKPT_DIR     = os.path.join(RESULTS_DIR, f"deberta_signals_{TRAIN_SAMPLE}")
 
 LABEL_ORDER  = ["Fast", "Medium", "Slow", "Stale"]
 LABEL2ID     = {l: i for i, l in enumerate(LABEL_ORDER)}
@@ -78,7 +78,7 @@ NUM_SIGNALS  = len(SIGNAL_COLS) + len(AUTHOR_CATS)  # 10
 TRAIN_CUTOFF = pd.Timestamp("2025-08-01", tz="UTC")
 TEST_CUTOFF  = pd.Timestamp("2025-11-01", tz="UTC")
 
-TRAIN_SAMPLE  = 500_000
+TRAIN_SAMPLE  = int(os.environ.get("TRAIN_SAMPLE", 500_000))
 MAX_LEN       = 512
 TRAIN_BATCH   = 16
 EVAL_BATCH    = 32
@@ -478,7 +478,7 @@ def main():
     )
     print(output)
 
-    eval_path = os.path.join(RESULTS_DIR, "deberta_signals_eval.txt")
+    eval_path = os.path.join(RESULTS_DIR, f"deberta_signals_eval_{TRAIN_SAMPLE}.txt")
     with open(eval_path, "w") as f:
         f.write(output)
     print(f"Eval written to {eval_path}")

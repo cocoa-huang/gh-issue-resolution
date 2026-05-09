@@ -1,0 +1,25 @@
+LLM zero-shot — text + repo signals (gpt-5.4-mini)
+Provider: openai
+Temporal split: train < 2025-08-01  |  test 2025-08-01 – 2025-10-31
+Evaluation sample: 1,000 sampled test issues from local parquet
+Signal features (10): ['title', 'body', 'issue_created_at', 'label', 'author_association', 'pr_merged_30d', 'avg_merge_hours_30d', 'push_count_30d', 'release_count_90d', 'star_count_30d']
+============================================================
+Macro-F1: 0.2927
+
+              precision    recall  f1-score   support
+
+        Fast      0.810     0.471     0.596       696
+      Medium      0.191     0.389     0.257       149
+        Slow      0.145     0.128     0.136        86
+       Stale      0.120     0.377     0.182        69
+
+    accuracy                          0.423      1000
+   macro avg      0.317     0.341     0.293      1000
+weighted avg      0.613     0.423     0.477      1000
+
+Confusion matrix (rows=true, cols=pred)
+Order: ['Fast', 'Medium', 'Slow', 'Stale']
+[[328 184  43 141]
+ [ 50  58  12  29]
+ [ 14  41  11  20]
+ [ 13  20  10  26]]
